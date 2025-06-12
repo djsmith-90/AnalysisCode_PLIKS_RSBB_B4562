@@ -1,5 +1,4 @@
-## Git repository for 'Exploring potential bidirectional causality between psychotic experiences and religiosity 
-## in a UK longitudinal cohort study (ALSPAC)' ALSPAC project (B4562)
+## Git repository for 'Exploring potential bidirectional causality between psychotic experiences and religiosity in a UK longitudinal cohort study (ALSPAC)' ALSPAC project (B4562)
 
 The main directory in this repository contains four scripts for the actual analyses. These files are:
  - Script1_PLIKS_RSBB_B4562_DataCleaning.do - Stata script to clean and process the raw ALSPAC data
