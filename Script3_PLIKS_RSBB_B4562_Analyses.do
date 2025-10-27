@@ -13,7 +13,7 @@ cd "X:\Studies\RSBB Team\Dan\B4562 - PLIKS and RSBB"
 
 ** Create log file
 capture log close
-log using ".\Results\PLEandReligion_analysis.log", replace
+log using ".\Results\PLEandReligion_analysis.log", replace name(main)
 
 * Open processed dataset
 use "PLIKS_RSBB_B4562_Processed.dta", clear
@@ -79,6 +79,23 @@ missings report _all, percent
 missings report _all if for_mi == 1, percent
 missings report _all if cca_rq1 == 1, percent
 missings report _all if cca_rq2 == 1, percent
+
+
+* Co-occurence of missing data patterns
+log off main
+capture log close miss
+log using ".\Results\PLEandReligion_misstables.log", replace name(miss)
+
+* RQ1
+misstable patterns belief identity attend lca PLE24_since12_susdef mat_age mat_home mat_marital mat_edu mat_imd mat_dep mat_anx mat_aces mat_belief mat_identity mat_attend pat_dep pat_anx pat_aces pat_belief pat_identity pat_attend sex ethnic trauma11 age28 MH10 LoC8 if for_mi == 1, asis
+dis r(K)
+
+* RQ2
+misstable patterns PLE32 belief identity attend lca mat_age mat_home mat_marital mat_edu mat_imd mat_dep mat_anx mat_aces mat_belief mat_identity mat_attend pat_dep pat_anx pat_aces pat_belief pat_identity pat_attend sex ethnic trauma17 relationship edu income imd home age32 PLE24_stem dep24 anx24 LoC16 if for_mi == 1, asis
+dis r(K)
+
+log close miss
+log on main
 
 
 drop for_mi cca_rq1 cca_rq2
@@ -322,7 +339,7 @@ margins r.PLE24_since12_def // Difference (marginal effect) of exposure for each
 ***** RQ2: Religion at 28 as exposure and PLE at 32 as outcome
 
 *** Religious belief exposure
-logistic PLE32 i.belief i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+logistic PLE32 i.belief mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32 ///
@@ -347,7 +364,7 @@ margins r.belief // Difference (marginal effect) of exposure on outcome
 
 
 *** Religious identity exposure
-logistic PLE32 i.identity i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+logistic PLE32 i.identity mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32  ///
@@ -373,7 +390,7 @@ margins r.identity // Difference (marginal effect) of exposure on outcome
 
 
 *** Religious attendance exposure
-logistic PLE32 i.attend i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+logistic PLE32 i.attend mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32  ///
@@ -399,7 +416,7 @@ margins r.attend // Difference (marginal effect) of exposure on outcome
 
 
 *** Religious LCA exposure
-logistic PLE32 i.lca i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+logistic PLE32 i.lca mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32  ///
@@ -473,10 +490,10 @@ mi impute chained ///
 	(mlogit) PLE24_since12 pat_belief belief lca mat_home mat_edu mat_belief edu home ///
 	(ologit) mat_imd imd income ///
 	= i.sex, ///
-	add(50) burnin(10) rseed(9876) dryrun
-
-
-** Now run the actual imputations. On a standard laptop, running 50 imputations with a burn-in period of 10 takes a couple of hours. Use 'dots' option to show progess, 'augment' to avoid perfect prediction of categorical variables (see White et al., 2010), and 'savetrace' to check convergence
+	add(10) burnin(20) rseed(9876) dryrun
+	
+	
+** Run test of 10 imputation and 20 iterations per chain to ensure convergence met. Use 'dots' option to show progess, 'augment' to avoid perfect prediction of categorical variables (see White et al., 2010), and 'savetrace' to check convergence
 mi impute chained ///
 	(regress) mat_age age28 ///
 	(pmm, knn(5)) mat_dep mat_anx mat_aces pat_dep pat_anx pat_aces age32 LoC8 LoC16 ///
@@ -484,12 +501,12 @@ mi impute chained ///
 	(mlogit) PLE24_since12 pat_belief belief lca mat_home mat_edu mat_belief edu home ///
 	(ologit) mat_imd imd income ///
 	= i.sex, ///
-	add(50) burnin(10) rseed(9876) dots augment replace ///
+	add(10) burnin(20) rseed(9876) dots augment replace ///
 	savetrace("./Results/imp_trace.dta", replace)
 	
 
 ** Save this imputed dataset, so not have to run whole imputation again to access results
-save "./Results/imputations_B4562.dta", replace
+save "./Results/imputations_test_B4562.dta", replace
 
 
 
@@ -531,13 +548,78 @@ reshape wide *mean *sd, i(iter) j(m)
 * Set the iteration variable as the 'time' variable
 tsset iter
 
-* Make the plots - These all look relatively well-mixed and converged
+* Make the plots - These all look relatively well-mixed and converged by around 10 iterations
 tsline PLE24_since12_mean*, yline(`mean_PLE24_since12') legend(off) name(PLE24_since12, replace)
 tsline PLE32_mean*, yline(`mean_PLE32') legend(off) name(PLE32, replace)
 tsline belief_mean*, yline(`mean_belief') legend(off) name(belief, replace)
 tsline identity_mean*, yline(`mean_identity') legend(off) name(identity, replace)
 tsline attend_mean*, yline(`mean_attend') legend(off) name(attend, replace)
 tsline lca_mean*, yline(`mean_lca') legend(off) name(lca, replace)
+
+graph close _all
+	
+
+** Now run the actual imputations. On a standard laptop, running 50 imputations with a burn-in period of 10 takes a couple of hours. 
+mi impute chained ///
+	(regress) mat_age age28 ///
+	(pmm, knn(5)) mat_dep mat_anx mat_aces pat_dep pat_anx pat_aces age32 LoC8 LoC16 ///
+	(logit) PLE32 identity attend mat_identity mat_attend mat_marital ethnic relationship trauma11 trauma17 pat_identity pat_attend PLE24_stem MH10 dep24 anx24 ///
+	(mlogit) PLE24_since12 pat_belief belief lca mat_home mat_edu mat_belief edu home ///
+	(ologit) mat_imd imd income ///
+	= i.sex, ///
+	add(50) burnin(10) rseed(9876) dots augment replace
+		
+
+** Save this imputed dataset, so not have to run whole imputation again to access results
+save "./Results/imputations_B4562.dta", replace
+
+
+
+** Check convergence and that imputation chains are well-mixed
+* Read in the trace dataset
+use "./Results/imp_trace.dta", clear
+
+sum 
+
+* Save the mean value to add as a line in the plot - Do this for all outcomes and exposures
+sum PLE24_since12_mean if iter >= 10
+local mean_PLE24_since12 = r(mean)
+display `mean_PLE24_since12'
+
+sum PLE32_mean if iter >= 10
+local mean_PLE32 = r(mean)
+display `mean_PLE32'
+
+sum belief_mean if iter >= 10
+local mean_belief = r(mean)
+display `mean_belief'
+
+sum identity_mean if iter >= 10
+local mean_identity = r(mean)
+display `mean_identity'
+
+sum attend_mean if iter >= 10
+local mean_attend = r(mean)
+display `mean_attend'
+
+sum lca_mean if iter >= 10
+local mean_lca = r(mean)
+display `mean_lca'
+
+
+* Convert the data from long to wide format (is necessary to create the plots)
+reshape wide *mean *sd, i(iter) j(m)
+
+* Set the iteration variable as the 'time' variable
+tsset iter
+
+* Make the plots - These all look relatively well-mixed and converged
+tsline PLE24_since12_mean*, yline(`mean_PLE24_since12') legend(off) name(PLE24_since12, replace) title("Offspring psychotic experiences at age 24")
+tsline belief_mean*, yline(`mean_belief') legend(off) name(belief, replace) title("Offspring religious belief at age 28")
+tsline identity_mean*, yline(`mean_identity') legend(off) name(identity, replace) title("Offspring religious identity at age 28")
+tsline attend_mean*, yline(`mean_attend') legend(off) name(attend, replace) title("Offspring religious service attendance at age 28")
+tsline lca_mean*, yline(`mean_lca') legend(off) name(lca, replace) title("Offspring religious latent classes at age 28")
+tsline PLE32_mean*, yline(`mean_PLE32') legend(off) name(PLE32, replace) title("Offspring psychotic experiences at age 32")
 
 graph close _all
 
@@ -826,7 +908,7 @@ use "./Results/imputations_B4562.dta", clear
 
 
 *** Religious belief exposure
-mi estimate, or: logistic PLE32 i.belief i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+mi estimate, or: logistic PLE32 i.belief mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.PLE24_stem i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32 i.dep24 i.anx24 LoC16
@@ -847,7 +929,7 @@ mimrgns r.belief, predict(pr) // Difference (marginal effect) of exposure on out
 
 
 *** Religious identity exposure
-mi estimate, or: logistic PLE32 i.identity i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+mi estimate, or: logistic PLE32 i.identity mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.PLE24_stem i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32 i.dep24 i.anx24 LoC16
@@ -868,7 +950,7 @@ mimrgns r.identity, predict(pr) // Difference (marginal effect) of exposure on o
 
 
 *** Religious attendance exposure
-mi estimate, or: logistic PLE32 i.attend i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+mi estimate, or: logistic PLE32 i.attend mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.PLE24_stem i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32 i.dep24 i.anx24 LoC16
@@ -890,7 +972,7 @@ mimrgns r.attend, predict(pr) // Difference (marginal effect) of exposure on out
 
 
 *** Religious LCA exposure
-mi estimate, or: logistic PLE32 i.lca i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
+mi estimate, or: logistic PLE32 i.lca mat_age i.mat_home i.mat_marital i.mat_edu i.mat_imd ///
 	mat_dep mat_anx mat_aces i.mat_belief i.mat_identity i.mat_attend ///
 	pat_dep pat_anx pat_aces i.pat_belief i.pat_identity i.pat_attend ///
 	i.PLE24_stem i.sex i.ethnic i.trauma17 i.relationship i.edu i.income i.imd i.home age32 i.dep24 i.anx24 LoC16
@@ -984,18 +1066,18 @@ evalue or 2.45, lcl(1.39) ucl(4.33)
 ** Exposure = Religious belief (reference = no)
 
 * Not sure response
-evalue or 1.61, lcl(1.24) ucl(2.10) common
+evalue or 1.61, lcl(1.24) ucl(2.09) common
 
 * Yes response
 evalue or 1.63, lcl(1.19) ucl(2.23) common
 
 
 ** Exposure = Religious identity (reference = None)
-evalue or 1.20, lcl(0.93) ucl(1.54) common
+evalue or 1.19, lcl(0.93) ucl(1.54) common
 
 
 ** Exposure = Religious attendance (reference = None)
-evalue or 1.54, lcl(0.91) ucl(2.62) common
+evalue or 1.54, lcl(0.91) ucl(2.63) common
 
 
 ** Exposure = Religious latent class (reference = "Atheist")
@@ -1007,8 +1089,10 @@ evalue or 1.69, lcl(1.27) ucl(2.24) common
 evalue or 2.25, lcl(1.62) ucl(3.13) common
 
 * "Highly religious" response
-evalue or 1.37, lcl(0.86) ucl(2.18) common
+evalue or 1.36, lcl(0.85) ucl(2.18) common
 
 
 log close
+
+
 
